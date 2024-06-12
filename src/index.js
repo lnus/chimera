@@ -1,16 +1,31 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
+const { fork } = require('child_process');
+
+// TODO: Fix menu, lol, whatever for now though
+
+// Check if we're running on macOS
+const isMac = process.platform === 'darwin';
+
+// Check if the app is running in development mode
+const isDev = process.env.NODE_ENV !== 'production';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+// Start express server
+fork(path.join(__dirname, 'server.js'));
+
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    // Random values for now (I will probably fix this later)
+    width: 1280,
+    height: 720,
+
+    // Pass preload script to the renderer
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -19,13 +34,13 @@ const createWindow = () => {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // If in development mode, open the DevTools.
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+// Calls when Electron has finished initialization and is ready to create browser windows.
 app.whenReady().then(() => {
   createWindow();
 
@@ -38,14 +53,11 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+  // Respect Cmd + Q on macOS
+  if (isMac) {
+    return;
   }
-});
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+  app.quit();
+});
